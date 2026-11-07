@@ -12,7 +12,7 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 RAIZ = Path(__file__).parent
 DADOS = RAIZ / "dados"
-SAIDA = RAIZ / "resultados"
+SAIDA = RAIZ / "resultados" / "benchmark"
 SUBMERCADOS = ["N", "NE", "S", "SE", "SIN"]
 
 ORDEM = (1, 1, 1)
@@ -71,7 +71,7 @@ def grafico(sub, y, teste, prev, ic, res, caminho):
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--inicio", default=None, help="data inicial do treino (ex.: 2010-01-01)")
+    parser.add_argument("--inicio", default="2016-01-01", help="data inicial do treino (ex.: 2010-01-01)")
     parser.add_argument("--horizonte", type=int, default=365, help="dias de teste/previsão")
     parser.add_argument("--submercados", nargs="+", default=SUBMERCADOS)
     args = parser.parse_args()
