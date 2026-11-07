@@ -32,10 +32,9 @@ This project investigates whether a **seasonal Generalized Autoregressive Score 
 | Measurement | Average power, **MWmed** |
 | Geographic scope | Brazilian Interconnected Power System (SIN) |
 | Regional subsystems | Southeast/Central-West (SE), South (S), Northeast (NE), North (N) |
-| Compiled interval | **2016-01-01 to 2026-11-04** |
-| SIN observations | **3,961 daily observations** |
-| Regional records | **15,844 observations** |
-| Source files | ONS annual CSV releases, 2016–2026 |
+| Study period | **2016-01-01 onward** (Excel snapshot ends 2026-11-04) |
+| Full history via script | 2000-01-01 to the latest ONS release (9,806 days as of 2026-11-05) |
+| Source files | ONS annual Parquet releases (`CARGA_ENERGIA_<year>.parquet`) |
 
 The SIN series was constructed as the sum of the four regional subsystems for each date:
 
@@ -43,9 +42,26 @@ $$
 Y_t^{\mathrm{SIN}}=Y_t^{SE}+Y_t^{S}+Y_t^{NE}+Y_t^{N}.
 $$
 
+If any subsystem is missing on a given date, the SIN value for that date is left as missing (no partial sums). In the current release this affects 3 days, the same dates on which the subsystems themselves are missing.
+
+### Download pipeline
+
+[`baixar_carga_ons.py`](baixar_carga_ons.py) queries the ONS CKAN API, downloads the annual Parquet files, and consolidates them:
+
+| Output | Content |
+|---|---|
+| `dados/raw/CARGA_ENERGIA_<year>.parquet` | Original annual files (current year is always re-downloaded) |
+| `dados/carga_<N\|NE\|S\|SE>.parquet` | One daily series per subsystem |
+| `dados/carga_SIN.parquet` | SIN series, sum of the four subsystems |
+| `dados/carga_todos_submercados.parquet` | All subsystems stacked, for convenience |
+
+All files share the columns `id_subsistema`, `nom_subsistema`, `din_instante` (date) and `val_cargaenergiamwmed` (MWmed). During consolidation, timestamps are truncated to the day and duplicated dates keep the non-missing value.
+
+Downloaded and generated Parquet files are not versioned (see [`.gitignore`](.gitignore)); run the script to rebuild them.
+
 ### Available dataset
 
-📊 **[ONS_CARGA_ENERGIA_2016_2026.xlsx](ONS_CARGA_ENERGIA_2016_2026.xlsx)**
+📊 **[dados/ONS_CARGA_ENERGIA_2016_2026.xlsx](dados/ONS_CARGA_ENERGIA_2016_2026.xlsx)** (static snapshot, 2016-01-01 to 2026-11-04)
 
 | Worksheet | Content |
 |---|---|
@@ -107,7 +123,18 @@ Planned checks:
 - Probability integral transform (PIT): histogram, uniformity, and serial dependence;
 - Outlier sensitivity and potential intervention variables.
 
-### 4. Out-of-sample forecasting
+### 4. SARIMA benchmark
+
+[`sarima_carga.py`](sarima_carga.py) fits a seasonal ARIMA benchmark to each series (N, NE, S, SE and SIN):
+
+- Model: SARIMA(1,1,1)×(1,1,1)<sub>7</sub> on log load;
+- Missing days are filled by linear interpolation;
+- The last `--horizonte` days (default 365) are held out for testing;
+- Reported metrics: MAPE, RMSE, MAE, AIC and the Ljung–Box p-value at lag 14.
+
+Outputs go to `resultados/`: `sarima_<series>.png` (forecast and residuals), `sarima_<series>_previsao.csv` (forecast with 95% interval), `sarima_<series>_resumo.txt` (model summary and Ljung–Box) and `sarima_metricas.csv` (all series). This is a preliminary benchmark; it does not yet follow the two-test design below.
+
+### 5. Out-of-sample forecasting
 
 | Stage | Period | Purpose |
 |---|---|---|
@@ -124,37 +151,68 @@ We plan to examine multiple forecast horizons, produce predictive means and medi
 
 | Workstream | Status | Tracking |
 |---|---|---|
-| Data consolidation | Dataset uploaded; further audit pending | [#1](https://github.com/CarlSouza02/trabalho-SDM-2026/issues/1) |
+| Data consolidation | ONS download pipeline and SIN series implemented; further audit pending | [#1](https://github.com/CarlSouza02/trabalho-SDM-2026/issues/1) |
 | Seasonality and exploratory analysis | Planned | [#2](https://github.com/CarlSouza02/trabalho-SDM-2026/issues/2) |
 | GAS formulation and estimation | Planned | [#3](https://github.com/CarlSouza02/trabalho-SDM-2026/issues/3) |
 | Diagnostics and outliers | Planned | [#4](https://github.com/CarlSouza02/trabalho-SDM-2026/issues/4) |
 | Two out-of-sample tests | Planned | [#5](https://github.com/CarlSouza02/trabalho-SDM-2026/issues/5) |
-| Benchmarks and comparison | Planned | [#6](https://github.com/CarlSouza02/trabalho-SDM-2026/issues/6) |
+| Benchmarks and comparison | Preliminary SARIMA benchmark implemented | [#6](https://github.com/CarlSouza02/trabalho-SDM-2026/issues/6) |
 | Report, slides, reproducibility | Planned | [#7](https://github.com/CarlSouza02/trabalho-SDM-2026/issues/7) |
 
 ➡️ **[View all open Issues](https://github.com/CarlSouza02/trabalho-SDM-2026/issues)**
 
 ## Getting started
 
-The **dataset is available now**. The modeling notebook and executable estimation pipeline will be added in later commits.
+### Repository structure
 
-To explore the Excel file locally:
+```
+.
+├── baixar_carga_ons.py   # downloads ONS data and builds the daily series
+├── sarima_carga.py       # SARIMA benchmark per subsystem and SIN
+├── requirements.txt      # pinned Python dependencies
+├── dados/                # data (Parquet files are generated, not versioned)
+│   └── ONS_CARGA_ENERGIA_2016_2026.xlsx
+└── resultados/           # benchmark outputs (figures, forecasts, metrics)
+```
+
+### Setup
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate          # Windows (Linux/macOS: source .venv/bin/activate)
+pip install -r requirements.txt
+```
+
+### Reproducing
+
+```bash
+python baixar_carga_ons.py              # download only what is missing (+ current year)
+python baixar_carga_ons.py --forcar     # re-download everything
+python sarima_carga.py                  # all series, 365-day test
+python sarima_carga.py --submercados SIN --inicio 2016-01-01 --horizonte 365
+```
+
+### Loading the data
 
 ```python
 import pandas as pd
 
-df = pd.read_excel(
-    "ONS_CARGA_ENERGIA_2016_2026.xlsx",
-    sheet_name="Serie_SIN",
-    parse_dates=["data"],
-)
-df = df.sort_values("data").set_index("data")
-y = df["carga_sin_mwmed"].asfreq("D")
-assert y.notna().all()
+sin = pd.read_parquet("dados/carga_SIN.parquet")
+y = sin.set_index("din_instante")["val_cargaenergiamwmed"].asfreq("D")
+y = y["2016-01-01":]
 print(y.describe())
 ```
 
-Once code is committed, this section will document the exact environment, dependencies, random seeds, and commands needed to reproduce the results.
+The Excel snapshot can still be read directly:
+
+```python
+df = pd.read_excel(
+    "dados/ONS_CARGA_ENERGIA_2016_2026.xlsx",
+    sheet_name="Serie_SIN",
+    parse_dates=["data"],
+)
+y = df.sort_values("data").set_index("data")["carga_sin_mwmed"].asfreq("D")
+```
 
 ## References
 

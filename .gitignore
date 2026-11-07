@@ -1,0 +1,28 @@
+# Ambiente virtual
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Dados baixados/gerados por baixar_carga_ons.py (reproduzíveis)
+dados/raw
+*.part
+*.parquet
+
+# Editores / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+~$*
