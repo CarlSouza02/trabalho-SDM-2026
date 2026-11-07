@@ -1,0 +1,7 @@
+checagem,resultado
+subsistemas na fonte,"N,NE,S,SE"
+fonte contém linha agregada (SIN/total)?,False
+"registros por (subsistema, data) após consolidação",máx = 1
+dias em que SIN tem valor,9803
+dias em que algum subsistema falta (SIN = NaN),3
+máx |SIN - (SE+S+NE+N)| em MWmed,1.4551915228366852e-11

@@ -72,6 +72,8 @@ Downloaded and generated Parquet files are not versioned (see [`.gitignore`](.gi
 
 **Important comparability caveat.** The ONS definition/composition of reported load changed over time. In particular, the source describes changes in **March 2021** and the inclusion of estimated distributed micro-/minigeneration beginning **29 April 2023**. These revisions must be considered in diagnostics, interpretation, and forecasts. The ONS may also revise published observations retrospectively. See the [source documentation](https://dados.ons.org.br/dataset/carga-energia).
 
+📋 **Data audit:** [docs/auditoria_base_ons.md](docs/auditoria_base_ons.md) documents the source, license (CC-BY), data dictionary, coverage, the SIN = SE + S + NE + N check, extreme values, and the estimated size of the 2021 and 2023 definition breaks (about +4% to +6% in level each).
+
 ## Methodology
 
 ### 1. Exploratory and seasonal analysis
@@ -151,7 +153,7 @@ We plan to examine multiple forecast horizons, produce predictive means and medi
 
 | Workstream | Status | Tracking |
 |---|---|---|
-| Data consolidation | ONS download pipeline and SIN series implemented; further audit pending | [#1](https://github.com/CarlSouza02/trabalho-SDM-2026/issues/1) |
+| Data consolidation | Done: download pipeline, SIN series and [audit report](docs/auditoria_base_ons.md) | [#1](https://github.com/CarlSouza02/trabalho-SDM-2026/issues/1) |
 | Seasonality and exploratory analysis | Planned | [#2](https://github.com/CarlSouza02/trabalho-SDM-2026/issues/2) |
 | GAS formulation and estimation | Planned | [#3](https://github.com/CarlSouza02/trabalho-SDM-2026/issues/3) |
 | Diagnostics and outliers | Planned | [#4](https://github.com/CarlSouza02/trabalho-SDM-2026/issues/4) |
@@ -168,11 +170,14 @@ We plan to examine multiple forecast horizons, produce predictive means and medi
 ```
 .
 ├── baixar_carga_ons.py   # downloads ONS data and builds the daily series
+├── auditoria_carga.py    # data audit (coverage, SIN check, extremes, definition breaks)
 ├── sarima_carga.py       # SARIMA benchmark per subsystem and SIN
 ├── requirements.txt      # pinned Python dependencies
+├── docs/
+│   └── auditoria_base_ons.md   # data audit and documentation report (issue #1)
 ├── dados/                # data (Parquet files are generated, not versioned)
 │   └── ONS_CARGA_ENERGIA_2016_2026.xlsx
-└── resultados/           # benchmark outputs (figures, forecasts, metrics)
+└── resultados/           # outputs (benchmark; audit tables and figures in auditoria/)
 ```
 
 ### Setup
@@ -188,6 +193,7 @@ pip install -r requirements.txt
 ```bash
 python baixar_carga_ons.py              # download only what is missing (+ current year)
 python baixar_carga_ons.py --forcar     # re-download everything
+python auditoria_carga.py               # data audit -> resultados/auditoria/
 python sarima_carga.py                  # all series, 365-day test
 python sarima_carga.py --submercados SIN --inicio 2016-01-01 --horizonte 365
 ```
