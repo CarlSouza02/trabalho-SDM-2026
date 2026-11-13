@@ -214,6 +214,15 @@ df = pd.read_excel(
 y = df.sort_values("data").set_index("data")["carga_sin_mwmed"].asfreq("D")
 ```
 
+## Literature review and references
+
+The project includes an applied literature review covering the foundational GAS/SDM framework, weekly and annual seasonality, heavy-tailed distributions, probabilistic forecasting, diagnostics and benchmarks for electricity load.
+
+- **[Applied literature review (Markdown)](literatura/revisao_bibliografica_SDM_ONS.md):** paper comparison, methodological options, equations and implementation roadmap.
+- **[Bibliography (BibTeX)](literatura/referencias_SDM_ONS.bib):** citation entries for LaTeX reports and Beamer slides.
+
+The review distinguishes established research results from proposed experiments. GAS performance results have not yet been obtained for this project.
+
 ## References
 
 1. Creal, D., Koopman, S. J., & Lucas, A. (2013). Generalized autoregressive score models with applications. *Journal of Applied Econometrics, 28*(5), 777–795. [DOI](https://doi.org/10.1002/jae.1279).
